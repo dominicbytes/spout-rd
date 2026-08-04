@@ -1,0 +1,215 @@
+diff --git a/src/spout_gd.cpp b/src/spout_gd.cpp
+index ef0c3b7..23fc182 100644
+--- a/src/spout_gd.cpp
++++ b/src/spout_gd.cpp
+@@ -51,9 +51,22 @@ bool Spout::get_cpu() {
+     return lib->GetCPU();
+ }
+
+-bool Spout::get_gldx() {
+-    return lib->GetGLDX();
+-}
++bool Spout::get_gldx() {
++    return lib->GetGLDX();
++}
++
++bool Spout::set_cpu_mode(bool p_enabled) {
++    return lib->SetCPUmode(p_enabled);
++}
++
++void Spout::enable_debug_log(const String &p_path) {
++    lib->EnableSpoutLogFile(p_path.utf8().get_data(), false);
++    lib->SetSpoutLogLevel(SpoutLibLogLevel::SPOUT_LOG_VERBOSE);
++}
++
++String Spout::get_debug_log() {
++    return String(lib->GetSpoutLog().c_str());
++}
+
+ void Spout::set_receiver_name(const String p_sender_name) {
+     if (p_sender_name.length() < 1) {
+@@ -170,7 +183,10 @@ void Spout::_bind_methods() {
+     ClassDB::bind_method(D_METHOD("get_frame"), &Spout::get_frame);
+     ClassDB::bind_method(D_METHOD("get_handle"), &Spout::get_handle);
+     ClassDB::bind_method(D_METHOD("get_cpu"), &Spout::get_cpu);
+-    ClassDB::bind_method(D_METHOD("get_gldx"), &Spout::get_gldx);
++    ClassDB::bind_method(D_METHOD("get_gldx"), &Spout::get_gldx);
++    ClassDB::bind_method(D_METHOD("set_cpu_mode", "enabled"), &Spout::set_cpu_mode);
++    ClassDB::bind_method(D_METHOD("enable_debug_log", "path"), &Spout::enable_debug_log);
++    ClassDB::bind_method(D_METHOD("get_debug_log"), &Spout::get_debug_log);
+
+     ClassDB::bind_method(D_METHOD("set_receiver_name", "sender_name"), &Spout::set_receiver_name);
+     ClassDB::bind_method(D_METHOD("release_receiver"), &Spout::release_receiver);
+diff --git a/src/spout_gd.h b/src/spout_gd.h
+index c1646ba..8ebf353 100644
+--- a/src/spout_gd.h
++++ b/src/spout_gd.h
+@@ -54,7 +54,10 @@ class Spout : public RefCounted {
+         UtilityFunctions::printerr("Not supported!");
+     }
+     bool get_cpu();
+-    bool get_gldx();
++    bool get_gldx();
++    bool set_cpu_mode(bool p_enabled);
++    void enable_debug_log(const String &p_path);
++    String get_debug_log();
+
+     void set_receiver_name(const String p_sender_name = String());
+     void release_receiver();
+@@ -82,7 +85,7 @@ class Spout : public RefCounted {
+     }
+
+     // utility functions
+-    unsigned int get_sender_count();
++    unsigned int get_sender_count();
+     String get_sender(unsigned int idx);
+
+     Spout();
+@@ -92,4 +95,4 @@ class Spout : public RefCounted {
+ VARIANT_ENUM_CAST(Spout::SpoutLogLevel);
+ VARIANT_ENUM_CAST(Spout::GLFormat);
+
+-#endif  // SPOUT_GD_H
+\ No newline at end of file
++#endif  // SPOUT_GD_H
+diff --git a/src/spout_viewport.cpp b/src/spout_viewport.cpp
+index 63993aa..c49552a 100644
+--- a/src/spout_viewport.cpp
++++ b/src/spout_viewport.cpp
+@@ -3,7 +3,13 @@
+ void SpoutViewport::_bind_methods() {
+     ClassDB::bind_method(D_METHOD("set_sender_name", "sender_name"), &SpoutViewport::set_sender_name);
+     ClassDB::bind_method(D_METHOD("get_sender_name"), &SpoutViewport::get_sender_name);
++    ClassDB::bind_method(D_METHOD("set_prefer_direct_texture", "enabled"), &SpoutViewport::set_prefer_direct_texture);
++    ClassDB::bind_method(D_METHOD("get_prefer_direct_texture"), &SpoutViewport::get_prefer_direct_texture);
++    ClassDB::bind_method(D_METHOD("is_using_direct_texture"), &SpoutViewport::is_using_direct_texture);
++    ClassDB::bind_method(D_METHOD("is_sending"), &SpoutViewport::is_sending);
++    ClassDB::bind_method(D_METHOD("get_successful_frame_count"), &SpoutViewport::get_successful_frame_count);
+     ADD_PROPERTY(PropertyInfo(Variant::STRING, "sender_name"), "set_sender_name", "get_sender_name");
++    ADD_PROPERTY(PropertyInfo(Variant::BOOL, "prefer_direct_texture"), "set_prefer_direct_texture", "get_prefer_direct_texture");
+ }
+
+ void SpoutViewport::set_sender_name(String sender_name) {
+@@ -14,6 +20,26 @@ String SpoutViewport::get_sender_name() const {
+     return _sender_name;
+ }
+
++void SpoutViewport::set_prefer_direct_texture(bool p_enabled) {
++    _prefer_direct_texture = p_enabled;
++}
++
++bool SpoutViewport::get_prefer_direct_texture() const {
++    return _prefer_direct_texture;
++}
++
++bool SpoutViewport::is_using_direct_texture() const {
++    return _using_gl_renderer && _prefer_direct_texture;
++}
++
++bool SpoutViewport::is_sending() const {
++    return _last_send_ok;
++}
++
++int64_t SpoutViewport::get_successful_frame_count() const {
++    return _successful_frame_count;
++}
++
+ void SpoutViewport::poll_server() {
+     if (is_queued_for_deletion()) {
+         return;
+@@ -34,12 +60,30 @@ void SpoutViewport::poll_server() {
+
+     auto rs = RenderingServer::get_singleton();
+     auto size = get_size();
++
++    // Redot 26.2's active OpenGL context crashes inside Spout's GL/DX
++    // compatibility probe on the tested driver. Keep the safe default inert
++    // under GL; direct sharing remains an explicit diagnostic opt-in.
++    if (_using_gl_renderer && !_prefer_direct_texture) {
++        _last_send_ok = false;
++        return;
++    }
+
+     // spout's API only supports GL texture handles at this moment.  If it exposes DX12 or Vulkan resource handles,
+     // switch to use RenderingDevice's get_driver_resource and send the texture handle directly
+-    if (_using_gl_renderer) {
+-        _spout->send_texture(
+-            rs->texture_get_native_handle(get_viewport_rid()),
++    if (is_using_direct_texture()) {
++        RID texture_rid = rs->viewport_get_texture(get_viewport_rid());
++        if (!texture_rid.is_valid()) {
++            return;
++        }
++
++        uint64_t native_handle = rs->texture_get_native_handle(texture_rid);
++        if (native_handle == 0) {
++            return;
++        }
++
++        _last_send_ok = _spout->send_texture(
++            native_handle,
+             0x0DE1, // GL_TEXTURE_2D
+             size.x,
+             size.y,
+@@ -48,7 +92,7 @@ void SpoutViewport::poll_server() {
+     }
+     // potentially slow, copies from GPU to CPU to send as pixels
+     else {
+-        _spout->send_image(
++        _last_send_ok = _spout->send_image(
+             get_texture()->get_image(),
+             size.x,
+             size.y,
+@@ -56,11 +100,18 @@ void SpoutViewport::poll_server() {
+             false
+         );
+     }
++
++    if (_last_send_ok) {
++        _successful_frame_count++;
++    }
+ }
+
+ void SpoutViewport::_notification(int p_what) {
+     if (p_what == NOTIFICATION_READY && !Engine::get_singleton()->is_editor_hint()) {
+         _spout = Ref(memnew(Spout));
++        if (!is_using_direct_texture()) {
++            _spout->set_cpu_mode(true);
++        }
+
+         auto _update = callable_mp(this, &SpoutViewport::poll_server);
+
+@@ -72,6 +123,7 @@ void SpoutViewport::_notification(int p_what) {
+     else if (p_what == NOTIFICATION_PREDELETE) {
+         if (_spout != nullptr) {
+             _spout->release_sender();
++            _last_send_ok = false;
+         }
+     }
+ }
+diff --git a/src/spout_viewport.h b/src/spout_viewport.h
+index 568fef6..fb8eddd 100644
+--- a/src/spout_viewport.h
++++ b/src/spout_viewport.h
+@@ -24,6 +24,9 @@ class SpoutViewport : public SubViewport {
+         Ref<Spout> _spout;
+         String _sender_name;
+         bool _using_gl_renderer;
++        bool _prefer_direct_texture{false};
++        bool _last_send_ok{false};
++        int64_t _successful_frame_count{0};
+
+         void poll_server();
+     protected:
+@@ -35,6 +38,11 @@ class SpoutViewport : public SubViewport {
+
+         void set_sender_name(String sender_name);
+         String get_sender_name() const;
++        void set_prefer_direct_texture(bool p_enabled);
++        bool get_prefer_direct_texture() const;
++        bool is_using_direct_texture() const;
++        bool is_sending() const;
++        int64_t get_successful_frame_count() const;
+ };
+
+ #endif  // SPOUT_GD_SPOUT_VIEWPORT_H

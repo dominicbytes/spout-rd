@@ -4,6 +4,8 @@
 *.so
 *.dylib
 *.dll
+!addons/spout-gd/*.dll
+addons/spout-gd/~*
 
 *.lib
 *.a
@@ -12,3 +14,8 @@
 *.dblite
 out/
 .scons_cache
+.godot/
+.test-user/
+.build/
+dist/*.zip
+*.log

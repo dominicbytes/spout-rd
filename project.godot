@@ -1,0 +1,30 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Redot Spout2 Output Addon Demo"
+run/main_scene="res://demo/spout_output_demo.tscn"
+config/features=PackedStringArray("26.2", "Redot")
+
+[display]
+
+window/size/viewport_width=960
+window/size/viewport_height=540
+window/size/window_width_override=960
+window/size/window_height_override=540
+window/stretch/mode="canvas_items"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
+rendering_device/driver.windows="d3d12"
+environment/defaults/default_clear_color=Color(0.025, 0.035, 0.055, 1)

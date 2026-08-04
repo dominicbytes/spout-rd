@@ -55,6 +55,9 @@ class Spout : public RefCounted {
     }
     bool get_cpu();
     bool get_gldx();
+    bool set_cpu_mode(bool p_enabled);
+    void enable_debug_log(const String &p_path);
+    String get_debug_log();
 
     void set_receiver_name(const String p_sender_name = String());
     void release_receiver();

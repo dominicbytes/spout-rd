@@ -1,0 +1,1 @@
+8eeb36d2e999e499886a425ef6b8094267f306e2402dcffe32a6e42fac78de9c  redot-spout-gd-0.1.0-alpha.1-windows-x86_64.zip

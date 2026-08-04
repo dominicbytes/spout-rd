@@ -55,6 +55,19 @@ bool Spout::get_gldx() {
     return lib->GetGLDX();
 }
 
+bool Spout::set_cpu_mode(bool p_enabled) {
+    return lib->SetCPUmode(p_enabled);
+}
+
+void Spout::enable_debug_log(const String &p_path) {
+    lib->EnableSpoutLogFile(p_path.utf8().get_data(), false);
+    lib->SetSpoutLogLevel(SpoutLibLogLevel::SPOUT_LOG_VERBOSE);
+}
+
+String Spout::get_debug_log() {
+    return String(lib->GetSpoutLog().c_str());
+}
+
 void Spout::set_receiver_name(const String p_sender_name) {
     if (p_sender_name.length() < 1) {
         lib->SetReceiverName();
@@ -171,6 +184,9 @@ void Spout::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_handle"), &Spout::get_handle);
     ClassDB::bind_method(D_METHOD("get_cpu"), &Spout::get_cpu);
     ClassDB::bind_method(D_METHOD("get_gldx"), &Spout::get_gldx);
+    ClassDB::bind_method(D_METHOD("set_cpu_mode", "enabled"), &Spout::set_cpu_mode);
+    ClassDB::bind_method(D_METHOD("enable_debug_log", "path"), &Spout::enable_debug_log);
+    ClassDB::bind_method(D_METHOD("get_debug_log"), &Spout::get_debug_log);
 
     ClassDB::bind_method(D_METHOD("set_receiver_name", "sender_name"), &Spout::set_receiver_name);
     ClassDB::bind_method(D_METHOD("release_receiver"), &Spout::release_receiver);

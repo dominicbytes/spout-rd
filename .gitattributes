@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.gd text eol=lf
+*.tscn text eol=lf
+*.godot text eol=lf
+*.gdextension text eol=lf
+*.dll binary

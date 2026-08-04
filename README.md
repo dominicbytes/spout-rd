@@ -1,71 +1,73 @@
-# Spout GD
+# Redot Spout GD
 
-[Godot](https://github.com/godotengine/godot) 4.5 bindings for [Spout](https://github.com/leadedge/Spout2).
+Windows x64 Spout2 input/output bindings prepared and tested for Redot 26.2. This package is a Redot-focused rebuild of [you-win/spout-gd](https://github.com/you-win/spout-gd), with a narrow compatibility and diagnostics patch for reliable `SpoutViewport` output.
 
-The Godot 3 engine module is located on the `godot-3` branch.
+Version: `0.1.0-alpha.1`
 
-Precompiled builds of the plugin can be found in the [releases](../../releases/tag/latest) section of github.
+This fork preserves the upstream history and contains the patched C++ source, pinned submodules, prebuilt Windows binaries, demo project, smoke test, build provenance, and release packaging. It is based on upstream commit [`867b32d`](https://github.com/you-win/spout-gd/commit/867b32df99738554a41117f947844e648ac6bef9).
 
-## Status
+Download the installable ZIP from the [`v0.1.0-alpha.1` prerelease](https://github.com/dominicbytes/spout-gd/releases/tag/v0.1.0-alpha.1).
 
-The sender/receiver apis have been implemented. Please open an issue if something doesn't seem to work.
+## Current status
 
-## Building
+- Tested with Redot `26.2.stable.official.4f5b14aba` on Windows x64.
+- Forward+/D3D12 output works through synchronous GPU-to-CPU image readback.
+- Verified in a local portable OBS 32.1.2 copy at 1920x1080 RGBA and 60 FPS using the Spout2 OBS plugin.
+- Live animation, alpha, same-GPU operation, and sender reconnect were verified.
+- Direct OpenGL texture sharing is experimental and disabled by default because Spout's GL/DX interop terminates the tested Redot/NVIDIA configuration.
+- Spout carries video only. Capture application audio separately in OBS.
 
-Prerequisites:
+This is an alpha package. The readback path is functional but is not zero-copy, and end-to-end latency still needs comparison against OBS Game/Window Capture under representative load.
 
-* Windows (Spout only works on Windows)
-* git
-* bash
-* scons
-* a C++ compiler capable of [compiling Godot](https://docs.godotengine.org/en/stable/contributing/development/compiling/compiling_for_windows.html)
-* cmake
+## Install
 
-Clone the repository: `git clone --recurse-submodules https://github.com/you-win/spout-gd.git`
+1. Download the Windows x64 release ZIP.
+2. Extract it into the root of a Redot project.
+3. Confirm this file exists: `res://addons/spout-gd/spout_gd.gdextension`.
+4. Restart the Redot editor so it imports and loads the GDExtension.
+5. Confirm `ClassDB.class_exists(&"SpoutViewport")` from GDScript.
 
-Run `build.sh` in a bash-compatible terminal. This will:
+This is a runtime GDExtension, not an `EditorPlugin`; there is no `plugin.cfg` checkbox to enable. Redot discovers the `.gdextension` descriptor automatically.
 
-* Compile Spout2
-* Compile the gdextension bindings
-* Compile spout-gd
-
-Once compilation is finished, the following files should be moved to your project's `addons/spout-gd` folder (create it manually if it does not exist):
-
-* `spout_gd.gdextension`
-* `Spout2/Binaries/x64/SpoutLibrary.dll`
-* `out/spout_gd.windows.template_debug.dll`
-* `out/spout_gd.windows.template_release.dll`
-
-Like this:
-```
-Godot_project_root
-├───addons
-│   ├───spout-gd
-│   │    ├───SpoutLibrary.dll
-│   │    ├───spout_gd.gdextension
-│   │    ├───spout_gd.windows.template_debug.dll
-│   │    ├───spout_gd.windows.template_release.dll
-```
-
-## Basic usage
+## Minimal sender
 
 ```gdscript
-var spout: Spout
-var my_image: Image = load_from_somewhere_idk() # Provide your own image somehow
-func _ready():
-    spout = Spout.new()
-    
-    spout.send_image(my_image, image.get_width(), image.get_height())
+extends Node
+
+var program: SubViewport
+
+
+func _ready() -> void:
+    assert(ClassDB.class_exists(&"SpoutViewport"))
+    program = ClassDB.instantiate(&"SpoutViewport") as SubViewport
+    program.name = "ProgramOutput"
+    program.size = Vector2i(1920, 1080)
+    program.transparent_bg = true
+    program.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    program.set("sender_name", "MyRedotProgram")
+    add_child(program)
+
+    # Add the 2D/3D content to publish as children of program.
 ```
 
-## SpoutTexture - Simple Receiving 
+For the tested path, use Forward+ with the D3D12 rendering driver and leave `prefer_direct_texture` disabled.
 
-Provided as a convenience is a Texture resource for receiving streams from a Spout sender.  You can use this any place you can use any other kind of Texture, including places like UI elements and Materials on 3D objects.
+## Demo and validation
 
-The sender is polled per render cycle.  
+The repository checkout includes a demo project and smoke test. Open its root as a Redot project and run it. The demo publishes `RedotSpoutDemo`, displays the same animated RGBA viewport locally, and writes `user://redot_spout_demo_report.json`.
 
-## SpoutViewport - Simple Sending
+Headless bridge smoke check:
 
-By wrapping the scene you wish to render in a SpoutViewport, you can easily send render target contents over Spout.  Simply use it the same way as you would a SubViewport, and assign a sender name for it to assume.
+```powershell
+& $env:REDOT_BIN --headless --path . --script res://tests/smoke_spout_bridge.gd
+```
 
-The SpoutViewport is designed to only send during application run time, not within the editor.  This helps prevent creating multiple senders with the same name during testing, allowing for more stable capture.
+The install ZIP intentionally omits `project.godot`, `demo`, and `tests` so extracting it cannot replace a target project's settings or add sample content. Those files remain available in the repository checkout.
+
+The repository also retains the native source under `src/`. The tested DLLs in `addons/spout-gd` are checked in so users do not need a C++ toolchain. Contributors can reproduce them using [docs/BUILDING.md](docs/BUILDING.md).
+
+See [docs/API.md](docs/API.md), [docs/BUILDING.md](docs/BUILDING.md), [THIRD_PARTY.md](THIRD_PARTY.md), and [CHANGELOG.md](CHANGELOG.md).
+
+## License and attribution
+
+Spout-GD and this derivative patch are distributed under MPL-2.0. Spout2 is distributed under the BSD 2-Clause license. Exact license texts are retained under `addons/spout-gd`, with pinned revisions and binary hashes in [THIRD_PARTY.md](THIRD_PARTY.md).
