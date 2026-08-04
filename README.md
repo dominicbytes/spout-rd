@@ -71,3 +71,17 @@ See [docs/API.md](docs/API.md), [docs/BUILDING.md](docs/BUILDING.md), [THIRD_PAR
 ## License and attribution
 
 Spout-GD and this derivative patch are distributed under MPL-2.0. Spout2 is distributed under the BSD 2-Clause license. Exact license texts are retained under `addons/spout-gd`, with pinned revisions and binary hashes in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+## Notes
+
+I vibe coded this in GPT Sol 5.6. Use at your own risk.
+
+## About Dominic Bytes
+
+Greetings! I am Dominic Bytes, the synth walker. I hail from the distant future. Where brains occupy robot bodies, time travel is a trip to the corner store, and the neon glow of our attire is powered by the light of our souls. Join me on a 1.21 gigawatt powered journey of chill vibes with gaming, anime, movies, and more!
+
+- [Website](https://dominicbytes.carrd.co/)
+- [X](https://x.com/DominicBytes)
+- [Twitch](https://www.twitch.tv/dominicbytes)
+- [YouTube](http://www.youtube.com/@DominicBytes)
+- [Kick](https://kick.com/dominicbytes)
