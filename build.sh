@@ -13,7 +13,7 @@ ROOT_DIR=$(dirname "$ROOT_DIR")
 echo "Building Spout"
 cd Spout2
 cmake -DSKIP_INSTALL_ALL=OFF -DSKIP_INSTALL_HEADERS=OFF -DSKIP_INSTALL_LIBRARIES=OFF -DSPOUT_BUILD_LIBRARY=ON --fresh .
-cmake --build . --clean-first
+cmake --build . --config Release --clean-first
 cd "$ROOT_DIR"
 
 echo "Building godot-cpp"

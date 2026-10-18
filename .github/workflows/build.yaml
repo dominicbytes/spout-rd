@@ -51,13 +51,80 @@ jobs:
       - name: Build GDExtension
         run: scons target=${{ matrix.target }} platform=windows arch=x86_64 -j2
 
+      - name: Stage CI binaries and SHA256 sums
+        shell: pwsh
+        run: |
+          $stage = New-Item -ItemType Directory -Force .build/ci-artifact
+          Copy-Item out/spout_gd.windows.${{ matrix.target }}.dll $stage
+          Copy-Item Spout2/Binaries/x64/SpoutLibrary.dll $stage
+          Copy-Item addons/spout-gd/spout_gd.gdextension, LICENSE, THIRD_PARTY.md $stage
+          Get-ChildItem $stage -Filter *.dll | Sort-Object Name | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content "$stage/SHA256SUMS.txt" -Encoding ascii
+
       - name: Upload native binaries
         uses: actions/upload-artifact@v4
         with:
           name: redot-spout-gd-windows-x86_64-${{ matrix.target }}
-          path: |
-            out/spout_gd.windows.${{ matrix.target }}.dll
-            Spout2/Binaries/x64/SpoutLibrary.dll
-            addons/spout-gd/spout_gd.gdextension
-            LICENSE
-            THIRD_PARTY.md
+          path: .build/ci-artifact/*
+          include-hidden-files: true
+          if-no-files-found: error
+
+  test:
+    name: Headless load/API tests on Redot 26.3
+    needs: build
+    runs-on: windows-latest
+    # Hosted runners have no GPU and Redot's headless display only supports the
+    # dummy renderer, so only the GPU-free load/API cases run here. The D3D12 and
+    # Vulkan pixel/sender suite (tests/run_tests.ps1 without -SkipGpu) must be run
+    # locally before a release.
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Download CI-built binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: redot-spout-gd-windows-x86_64-*
+          path: .build/ci-artifacts
+
+      - name: Verify and stage CI-built DLLs
+        shell: pwsh
+        run: |
+          foreach ($target in @('template_debug', 'template_release')) {
+            $artifact = ".build/ci-artifacts/redot-spout-gd-windows-x86_64-$target"
+            foreach ($line in Get-Content "$artifact/SHA256SUMS.txt") {
+              $expected, $name = $line -split '  ', 2
+              $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath "$artifact/$name").Hash
+              if ($actual -ne $expected) { throw "SHA256 mismatch: $name" }
+            }
+            Copy-Item "$artifact/spout_gd.windows.$target.dll" addons/spout-gd/ -Force
+            Copy-Item "$artifact/SpoutLibrary.dll" addons/spout-gd/ -Force
+          }
+
+      - name: Download official Redot 26.3 and verify published SHA512
+        shell: pwsh
+        run: |
+          $base = 'https://github.com/Redot-Engine/redot-engine/releases/download/redot-26.3-stable'
+          $asset = 'Redot_v26.3-stable_windows_win64.zip'
+          $pinned = '1a4bc6eafc7ce1dab616978f91253605b3e25d6d799deadcf248b07e080aa69610f0dbdbdcaa27f4025b06b6b2af350eff05ac38f5e7c85f3a34048395c037e2'
+          $download = New-Item -ItemType Directory -Force .build/redot
+          Invoke-WebRequest "$base/$asset" -OutFile "$download/$asset"
+          Invoke-WebRequest "$base/SHA512-SUMS.txt" -OutFile "$download/SHA512-SUMS.txt"
+          $record = @(Get-Content "$download/SHA512-SUMS.txt" | Where-Object {
+            $_ -match ('^[0-9a-fA-F]{128}\s+releases/' + [regex]::Escape($asset) + '$')
+          })
+          if ($record.Count -ne 1) { throw 'Missing or ambiguous published SHA512' }
+          $published = ($record[0] -split '\s+')[0]
+          $actual = (Get-FileHash -Algorithm SHA512 -LiteralPath "$download/$asset").Hash
+          if ($published -ne $pinned -or $actual -ne $published) { throw 'Redot SHA512 mismatch' }
+          Expand-Archive "$download/$asset" -DestinationPath "$download/editor"
+          $editor = Get-ChildItem "$download/editor" -Recurse -Filter redot.windows.editor.x86_64.llvm.console.exe
+          if (@($editor).Count -ne 1) { throw 'Expected one Redot console editor' }
+          "REDOT_BIN=$($editor.FullName)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Run headless load/API tests
+        shell: pwsh
+        run: pwsh tests/run_tests.ps1 -SkipGpu -Drivers d3d12 -WorkRoot "$env:RUNNER_TEMP/spout-rd-tests"
