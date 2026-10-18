@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Redot Spout2 Output Addon Demo"
 run/main_scene="res://demo/spout_output_demo.tscn"
-config/features=PackedStringArray("26.2", "Redot")
+config/features=PackedStringArray("26.3", "Redot")
 
 [display]
 

@@ -9,7 +9,7 @@ The extension registers three native classes: `Spout`, `SpoutTexture`, and `Spou
 | Member | Type | Purpose |
 |---|---|---|
 | `sender_name` | `String` property | Spout sender name visible to receivers. |
-| `prefer_direct_texture` | `bool` property | Experimental OpenGL direct-texture opt-in. Keep `false` on the tested Redot 26.2 configuration. |
+| `prefer_direct_texture` | `bool` property | Experimental OpenGL direct-texture opt-in. Keep `false` on the tested Redot 26.3 configuration. |
 | `is_sending()` | `bool` | Reports whether the most recent native send succeeded. |
 | `get_successful_frame_count()` | `int` | Number of successful sends since this viewport started. |
 | `is_using_direct_texture()` | `bool` | Reports whether the experimental direct path is active. |

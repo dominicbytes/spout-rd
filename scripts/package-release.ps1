@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.1.0-alpha.1"
+    [string]$Version = "0.2.0-alpha.1"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,18 +22,34 @@ New-Item -ItemType Directory -Force -Path (Join-Path $buildRoot "addons") | Out-
 New-Item -ItemType Directory -Force -Path $distRoot | Out-Null
 
 Copy-Item -LiteralPath (Join-Path $root "addons\spout-gd") -Destination (Join-Path $buildRoot "addons") -Recurse
-Copy-Item -LiteralPath (Join-Path $root "docs") -Destination $buildRoot -Recurse
-Copy-Item -LiteralPath (Join-Path $root "patches") -Destination $buildRoot -Recurse
-Copy-Item -LiteralPath (Join-Path $root "README.md") -Destination $buildRoot
-Copy-Item -LiteralPath (Join-Path $root "LICENSE") -Destination $buildRoot
-Copy-Item -LiteralPath (Join-Path $root "THIRD_PARTY.md") -Destination $buildRoot
-Copy-Item -LiteralPath (Join-Path $root "CHANGELOG.md") -Destination $buildRoot
+$addonRoot = Join-Path $buildRoot "addons\spout-gd"
+# Drop gitignored leftovers such as ~*.dll renamed aside while Redot held the DLL locked.
+Get-ChildItem -LiteralPath $addonRoot -Recurse -File -Filter "~*" | Remove-Item -Force
+foreach ($name in @("LICENSE", "THIRD_PARTY.md", "README.md")) {
+    $destination = Join-Path $addonRoot $name
+    if (-not (Test-Path -LiteralPath $destination)) {
+        Copy-Item -LiteralPath (Join-Path $root $name) -Destination $destination
+    }
+}
 
 if (Test-Path -LiteralPath $archivePath) {
     Remove-Item -LiteralPath $archivePath -Force
 }
 
-Compress-Archive -Path (Join-Path $buildRoot "*") -DestinationPath $archivePath -CompressionLevel Optimal
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open($archivePath, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($file in Get-ChildItem -LiteralPath $addonRoot -Recurse -File) {
+        $entryName = $file.FullName.Substring($buildRoot.Length + 1).Replace('\', '/')
+        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $archive, $file.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal
+        ) | Out-Null
+    }
+}
+finally {
+    $archive.Dispose()
+}
 $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath
 "$($hash.Hash.ToLowerInvariant())  $([System.IO.Path]::GetFileName($archivePath))" | Set-Content -LiteralPath $checksumPath -Encoding ASCII
 

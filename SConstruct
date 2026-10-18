@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+import os
 
 if sys.version_info.major < 3:
     raise Exception("Python 3 is required, bailing out")
@@ -16,7 +17,11 @@ Path(OUTPUT_DIR).mkdir(exist_ok=True)
 
 env = SConscript("godot-cpp/SConstruct")
 
-env.Append(CPPPATH=["src", "."], LIBS=["Spout2\\Binaries\\x64\\SpoutLibrary.lib"])
+env.Append(CPPPATH=["src", "."], LIBS=[os.environ.get("SPOUT_LIBRARY", "Spout2\\Binaries\\x64\\SpoutLibrary.lib"), "shell32"])
+
+if env.get("is_msvc", False):
+    # Strip the checkout location from __FILE__ so built DLLs don't embed the builder's local paths.
+    env.Append(CCFLAGS=["/d1trimfile:" + Dir("#").abspath])
 
 src_directory: Path = Path("src/")
 sources: list = [Glob("src/*.cpp")]  # Need to add all files in src/ first
