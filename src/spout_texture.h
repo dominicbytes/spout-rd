@@ -20,12 +20,12 @@ class SpoutTexture : public ImageTexture {
 
     private:
         Ref<Spout> _spout;
+        bool _separate_render_thread{false};
         Ref<Image> _image;
-        PackedByteArray _buffer;
         String _sender_name;
-        bool _update_in_editor;
+        bool _update_in_editor{false};
 
-        void rebuild_image(int32_t width, int32_t height);
+        void initialize_receiver();
         void poll_server();
     protected:
         static void _bind_methods();

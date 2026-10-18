@@ -1,6 +1,8 @@
 [submodule "Spout2"]
+	ignore = untracked
 	path = Spout2
 	url = https://github.com/leadedge/Spout2.git
 [submodule "godot-cpp"]
+	ignore = untracked
 	path = godot-cpp
 	url = https://github.com/godotengine/godot-cpp.git

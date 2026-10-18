@@ -22,12 +22,16 @@ class SpoutViewport : public SubViewport {
 
     private:
         Ref<Spout> _spout;
+        bool _separate_render_thread{false};
         String _sender_name;
-        bool _using_gl_renderer;
+        String _applied_sender_name;
+        PackedByteArray _hdr_buffer;
+        bool _using_gl_renderer{false};
         bool _prefer_direct_texture{false};
         bool _last_send_ok{false};
         int64_t _successful_frame_count{0};
         
+        void apply_sender_name();
         void poll_server();
     protected:
         static void _bind_methods();
@@ -38,6 +42,7 @@ class SpoutViewport : public SubViewport {
 
         void set_sender_name(String sender_name);
         String get_sender_name() const;
+        String get_active_sender_name() const;
         void set_prefer_direct_texture(bool p_enabled);
         bool get_prefer_direct_texture() const;
         bool is_using_direct_texture() const;

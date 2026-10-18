@@ -14,6 +14,10 @@ class Spout : public RefCounted {
 
    private:
     SPOUTLIBRARY *lib{nullptr};
+    PackedByteArray _receive_buffer;
+    bool _pending_update{false};
+    bool _consume_receiver_update();
+    bool _receive_into(PackedByteArray &buf, int &w, int &h, bool p_invert = false, GLuint p_host_fbo = 0);
 
    protected:
     static void _bind_methods();
@@ -33,9 +37,10 @@ class Spout : public RefCounted {
         FORMAT_RGB = 0x1907,
         FORMAT_RGBA = 0x1908,
         FORMAT_BGRA = 0x80E1,
-        FORMAT_BGRA_EXT = 0x80E1
+        FORMAT_BGRA_EXT = 0x80E1 // Alias of FORMAT_BGRA.
     };
 
+    static bool uses_separate_render_thread();
     void set_sender_name(const String &p_sender_name = String());
     void set_sender_format() {
         UtilityFunctions::printerr("Not supported!");
@@ -44,7 +49,9 @@ class Spout : public RefCounted {
     void release_sender();
     bool send_fbo(GLuint p_fbo_id, unsigned int p_width, unsigned int p_height, bool p_invert = true);
     bool send_texture(GLuint p_texture_id, GLuint p_texture_target, unsigned int p_width, unsigned int p_height, bool p_invert = true, GLuint p_host_fbo = 0);
-    bool send_image(const Ref<Image> p_image, unsigned int p_width, unsigned int p_height, GLFormat p_gl_format = GLFormat::FORMAT_RGBA, bool p_invert = false);
+    bool send_image(const Ref<Image> p_image, unsigned int p_width, unsigned int p_height, GLFormat p_gl_format = GLFormat::FORMAT_RGBA, bool p_invert = true);
+    // Send tightly packed RGB8/RGBA8 pixels (also used after viewport HDR conversion).
+    bool send_bytes(const PackedByteArray &p_data, unsigned int p_width, unsigned int p_height, GLFormat p_gl_format = GLFormat::FORMAT_RGBA, bool p_invert = true);
     String get_name();
     unsigned int get_width();
     unsigned int get_height();
@@ -58,12 +65,17 @@ class Spout : public RefCounted {
     bool set_cpu_mode(bool p_enabled);
     void enable_debug_log(const String &p_path);
     String get_debug_log();
+    void disable_debug_log();
 
     void set_receiver_name(const String p_sender_name = String());
     void release_receiver();
     bool receive_texture(GLuint p_texture_id = 0, GLuint p_texture_target = 0, bool p_invert = false, GLuint p_host_fbo = 0);
+    // Deprecated: PackedByteArray is passed by value, so this cannot update a GDScript caller.
+    // Use receive_bytes() or receive_image() instead.
     bool receive_buffer(PackedByteArray p_data, GLFormat p_gl_format, bool p_invert = false, GLuint p_host_fbo = 0);
     bool receive_image(Ref<Image> p_image, GLFormat p_gl_format, bool p_invert = false, GLuint p_host_fbo = 0);
+    // Returns an RGBA8 frame, or an empty array while disconnected / changing size.
+    PackedByteArray receive_bytes(bool p_invert = false, GLuint p_host_fbo = 0);
     bool is_updated();
     bool is_connected();
     bool is_frame_new();
