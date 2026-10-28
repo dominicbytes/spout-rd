@@ -11,7 +11,7 @@ The previous published installable ZIP is available from the [`v0.1.0-alpha.1` p
 ## Current status
 
 - Tested with Redot `26.3.stable.official.85e520394` on Windows x64.
-- No ABI change is needed for 26.3; `compatibility_minimum = 4.5` and the godot-cpp 4.5 pin remain unchanged.
+- The source builds against the pinned redot-cpp 26.2 fork; `compatibility_minimum = 4.5` matches its generated compatibility version. The checked-in DLLs predate this binding switch.
 - Forward+/D3D12 output works through synchronous GPU-to-CPU image readback.
 - Verified in a local portable OBS 32.1.2 copy at 1920x1080 RGBA and 60 FPS using the Spout2 OBS plugin.
 - Live animation, alpha, same-GPU operation, and sender reconnect were verified.
