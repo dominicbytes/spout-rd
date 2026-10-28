@@ -11,6 +11,8 @@
 
 The packaged addon contains the Spout-GD GDExtension binaries and `SpoutLibrary.dll`. Spout-GD wraps the Spout2 SDK; Spout2 is distributed under the BSD 2-Clause license. This Redot package retains the upstream addon filenames and directory structure.
 
+The source now pins the MIT-licensed redot-cpp fork at `9e7161bd7a3572a36ffa93109e73169861e9f834`. The checked-in DLLs predate this switch and must be rebuilt for a release.
+
 The checked-in DLLs were rebuilt from Spout-GD commit `867b32df99738554a41117f947844e648ac6bef9` with pinned submodules Spout2 `5c05489d2fc5fa4dd689a2a13ac65c3c4e976ae2` and godot-cpp `e83fd0904c13356ed1d4c3d09f8bb9132bdc6b77`. The Redot-specific source correction is retained in `patches/spout-gd-redot-26.2.patch`.
 
 Rebuilt binary SHA-256 values:

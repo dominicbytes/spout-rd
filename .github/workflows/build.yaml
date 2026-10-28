@@ -27,6 +27,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Verify binding pin
+        shell: pwsh
+        run: if ((git -C godot-cpp rev-parse HEAD) -ne "9e7161bd7a3572a36ffa93109e73169861e9f834") { throw "Binding pin mismatch" }
 
       - name: Set up Python
         uses: actions/setup-python@v5

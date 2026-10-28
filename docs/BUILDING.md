@@ -4,7 +4,7 @@
 
 - Spout-GD: `867b32df99738554a41117f947844e648ac6bef9`
 - Spout2: `5c05489d2fc5fa4dd689a2a13ac65c3c4e976ae2`
-- godot-cpp: `e83fd0904c13356ed1d4c3d09f8bb9132bdc6b77`
+- redot-cpp fork: `9e7161bd7a3572a36ffa93109e73169861e9f834` (in the `godot-cpp` directory)
 - Historical Redot 26.2 patch: `patches/spout-gd-redot-26.2.patch`
 
 ## Prerequisites
@@ -20,11 +20,10 @@
 ```powershell
 git clone --recursive https://github.com/dominicbytes/spout-rd.git spout-rd-source
 Set-Location spout-rd-source
-git checkout redot-26.3-hardening
 git submodule update --init --recursive
 ```
 
-The hardening branch is unreleased and contains the Redot source changes and pins the Spout2 and godot-cpp commits listed above. `patches/spout-gd-redot-26.2.patch` is retained only as an auditable diff against upstream commit `867b32d`.
+The source includes the Redot changes and pins the Spout2 and redot-cpp commits listed above. `patches/spout-gd-redot-26.2.patch` is retained only as an auditable diff against upstream commit `867b32d`.
 
 Build Spout2 as described by upstream, then build both GDExtension targets:
 
@@ -40,7 +39,7 @@ Stage these outputs under `addons/spout-gd`:
 - `out/spout_gd.windows.template_release.dll`
 - `Spout2/Binaries/x64/SpoutLibrary.dll`
 
-The current hardening target is Redot 26.3-stable. Its ABI is compatible with the pinned godot-cpp 4.5 bindings; `compatibility_minimum` remains 4.5.
+The current hardening target is Redot 26.3-stable. The fork generates a 4.5.2 compatibility version; `compatibility_minimum` remains 4.5. Checked-in DLLs predate the binding switch and must be rebuilt for a release.
 
 Set `REDOT_BIN` to the Redot 26.3 console editor executable, then run `pwsh tests/run_tests.ps1 -Driver d3d12` and `pwsh tests/run_tests.ps1 -Driver vulkan`, plus a bounded D3D12 demo before packaging. The installed Redot build is authoritative; successful compilation against upstream Godot headers alone is not sufficient validation.
 
